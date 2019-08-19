@@ -1,0 +1,32 @@
+plugins {
+    id 'org.springframework.boot' version '2.1.6.RELEASE'
+    id 'java'
+}
+
+apply plugin: 'io.spring.dependency-management'
+
+group = 'com.example.socket'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '1.8'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
+    implementation 'org.springframework.kafka:spring-kafka:2.2.0.RELEASE'
+    implementation 'org.apache.kafka:kafka_2.12:2.0.0'
+    implementation 'org.redisson:redisson:3.11.2'
+    // 身份校验
+//    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+//    implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
+    // 管理 websocket 与 mq 之间的TCP连接
+    implementation 'io.projectreactor.netty:reactor-netty:0.8.8.RELEASE'
+    //implementation 'io.netty', name: 'netty-all', version: '4.1.32.Final'
+    implementation 'io.projectreactor:reactor-core:3.2.6.RELEASE'
+    // 测试包
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.kafka:spring-kafka-test'
+}
