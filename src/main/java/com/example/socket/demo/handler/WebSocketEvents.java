@@ -14,6 +14,7 @@ import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
+import org.springframework.messaging.simp.broker.BrokerAvailabilityEvent;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.messaging.SessionConnectEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
@@ -27,6 +28,15 @@ public class WebSocketEvents {
 
     @Autowired
     private RedissonClient redisson;
+
+    @EventListener
+    private void handleSessionDisconnect(BrokerAvailabilityEvent event) {
+        if (event.isBrokerAvailable()) {
+            System.out.println("broker available");
+        } else {
+            System.out.println("broker unavailable");
+        }
+    }
 
     @EventListener
     private void handleSessionConnected(SessionConnectEvent event) {

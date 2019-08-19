@@ -53,6 +53,29 @@ public class WebSocketMessageBrokerConfig implements WebSocketMessageBrokerConfi
                     若sy=0，则客户端即使断联，服务端也会不断向他发送心跳消息 —— 不推荐（设为0，可以使用EndPoint进行统一的心跳检测。但是增加了负担，不推荐）
                     info.getLastWriteTime：服务端发送一次 MESSAGE消息后成功后设置，发送 HEARTBEAT心跳消息不更新
                     info.getLastReadTime：每次接受到客户端消息，就会更新一次
+                 注意{cx,cy} 与 {sx,sy}的关系 —— 保证间隔时间内沟通
+                 1、服务端的“心跳发送”定时任务执行间隔时间
+                    org.springframework.messaging.simp.broker.SimpleBrokerMessageHandler.initHeartbeatTaskDelay
+                    interval = min(serverValOfWriteInterval, serverValOfReadInterval)
+                 2、PING\PONG的间隔时间：
+                 2.1、服务端对每个socket client的心跳机制：
+                    org.springframework.messaging.simp.broker.SimpleBrokerMessageHandler.SessionInfo.SessionInfo
+                    interval = max(clientVal1, serverVal0)
+                 2.2、socket client对服务端的心跳机制：
+                    stomp.js 的方法Client.prototype._setupHeartbeat
+                    ttl = max(clientVal0, serverVal1)
+                 3、分析
+                    server 每 minServerVal 对所有已经建立连接的 client发送一次心跳，并要求每 max(clientVal0, serverVal1)间隔内接收到一次client消息；
+                    client 每 max(clientVal0, serverVal1) 对所有已经建立连接的 server发送一次心跳，并要求每 max(clientVal1, serverVal0)间隔内接收到一次 server消息；
+                    若：
+                    3.1、serverVal1 > serverVal0 > clientVal1 > clientVal0
+                    server 每 serverVal0 对所有已经建立连接的 client发送一次心跳，并要求每 serverVal1间隔内接收到一次client消息；
+                    client 每 serverVal1 对所有已经建立连接的 server发送一次心跳，并要求每 serverVal0间隔内接收到一次 server消息；
+                    3.2、clientVal1 > clientVal0 > serverVal1 > serverVal0
+                    server 每 serverVal0 对所有已经建立连接的 client发送一次心跳，并要求每 clientVal0间隔内接收到一次client消息；
+                    client 每 clientVal0 对所有已经建立连接的 server发送一次心跳，并要求每 clientVal1间隔内接收到一次 server消息；
+                    可见，无论如何，都能在间隔时间内，client\server端都能在过期前及时发送出消息
+                    且，client端接受消息的过期时间为2*max(clientVal1, serverVal0)；server端接受消息的过期时间为3*max(clientVal0, serverVal1)
                  */
                 .setHeartbeatValue(new long[] { 5_000L, 5_000L })  // 服务端每5s向建立连接的客户端发送一次心跳，客户端发生心跳的间隔不可大于10min=10*60*1000
                 .setTaskScheduler(taskScheduler);//todo 计算用户量，避免资源吃不消。每次用户都发一遍（在一个定时任务中）

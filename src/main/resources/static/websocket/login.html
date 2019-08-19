@@ -41,8 +41,8 @@
             headers.Authorization = accessToken;
             var userId = document.getElementById("userId").value;
             headers.userId = userId;
-            headers['heart-beat'] = "1,2";
-            // heart-beat
+            // heart-beat:客户端希望每1秒向服务端发送一次心跳，并且希望每2秒接收到服务端发送给自己一次心跳
+            // headers['heart-beat'] = "1,2";//这样设置没有用。因为在Client对象初始化时，就赋值了默认值，且不会根据header设置而改变
             stompClient.connect(headers
                 // 成功建立连接的回调函数
                 , function (frame) {
