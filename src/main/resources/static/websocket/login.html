@@ -1,11 +1,13 @@
 <!DOCTYPE html>
-<html lang="zh-CN" >
-<meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
+<html>
 <head>
     <title>Chat WebSocket</title>
-    <!--    <script src="./sockjs.js"></script>-->
     <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
-    <script src="stomp.js"></script>
+    <!--    <script src="http://cdn.sockjs.org/sockjs-0.3.4.js"></script>-->
+    <!--    stomp.js不可用，导致stomp.over 不可用。换了个资源就好了-->
+    <script src="http://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.js"></script>
+    <!--    <script src="https://github.com/stomp-js/stompjs"></script>-->
+    <!--    <script src="stomp.js"/>-->
     <script type="text/javascript">
         var stompClient = null;
 
@@ -15,8 +17,8 @@
             document.getElementById('conversationDiv').style.visibility
                 = connected ? 'visible' : 'hidden';
             document.getElementById('response').innerHTML = '';
-            document.getElementById("sendToUserDIV").style.visibility = !connected ? 'visible' : 'hidden';
-            document.getElementById("sendMessageToUser").style.visibility = !connected ? 'visible' : 'hidden';
+            // document.getElementById("sendToUserDIV").style.visibility = !connected ? 'visible' : 'hidden';
+            // document.getElementById("sendMessageToUser").style.visibility = !connected ? 'visible' : 'hidden';
         }
 
         function setConnectedSenToUser(connected) {
@@ -36,18 +38,23 @@
             var socket = new SockJS('/masc_kitchen/api/socket');
             stompClient = Stomp.over(socket);
             var accessToken = document.getElementById("accessToken").value;
-            var userId = document.getElementById("userId").value;
             headers.Authorization = accessToken;
             var userId = document.getElementById("userId").value;
             headers.userId = userId;
+            headers['heart-beat'] = "1,2";
+            // heart-beat
             stompClient.connect(headers
                 // 成功建立连接的回调函数
                 , function (frame) {
                     setConnectedSenTo(true);
                     console.log('Connected: ' + frame);
                     // 订阅消息，接受服务端发出的所有具有相同topic的消息
-                    // 广播信息
-                    stompClient.subscribe('/topic/v1/notifications/updates/' + userId, function (messageOutput) {
+                    // 广播信息：用户消息 + 学校消息
+                    // stompClient.subscribe('/topic/v1/user/notifications/updates/' + userId, function (messageOutput) {
+                    //     showMessageOutput(JSON.parse(messageOutput.body));
+                    // });
+                    var businessId = document.getElementById("businessId").value;
+                    stompClient.subscribe('/topic/v1/school/notifications/updates/' + businessId, function (messageOutput) {
                         showMessageOutput(JSON.parse(messageOutput.body));
                     });
                     // 对话消息：必须加 /user 前缀，保证只有本用户接受到
@@ -119,7 +126,7 @@
         }
 
         function sendMessageToUser() {
-            var msgType = document.getElementById('msgType').value;
+            var eventType = document.getElementById('eventType').value;
             var userId = document.getElementById("userId").value;
             var headers = {};
             headers.Authorization = this.headers.Authorization;
@@ -127,18 +134,19 @@
             // 客户端向服务端发送消息
             stompClient.send("/app/secured/v1/updates", headers,// 1：登陆用户的userId
                 // stompClient.send("/user/" + userId + "/queue/position-updates", headers,// 1：登陆用户的userId
-                JSON.stringify({'msgType': msgType}));
+                JSON.stringify({'eventType': eventType}));
         }
 
         function sendMessageTo() {
-            var msgType = document.getElementById('msgType').value;
-            var userId = document.getElementById("userId").value;
+            var eventType = document.getElementById('eventType').value;
             var headers = {};
             headers.Authorization = this.headers.Authorization;
+            var userId = document.getElementById("userId").value;
             headers.userId = userId;
             // 客户端向服务端发送消息
-            stompClient.send("/app/secured/v1/updates/" + userId, headers,// 1：登陆用户的userId
-                JSON.stringify({'msgType': msgType}));
+            var businessId = document.getElementById("businessId").value;
+            stompClient.send("/app/secured/v1/updates/" + businessId, headers,// 1：登陆用户的userId
+                JSON.stringify({'eventType': eventType}));
         }
 
         function showMessageOutput(messageOutput) {
@@ -149,8 +157,8 @@
                 p.appendChild(document.createTextNode(messageOutput.result_desc));
             } else {
                 var result_data = messageOutput.result_data;
-                var result = objToString(result_data.alramCountList);
-                p.appendChild(document.createTextNode("msgType=" + result_data.msgType + "; issuedTime="
+                var result = objToString(result_data.list);
+                p.appendChild(document.createTextNode("eventType=" + result_data.eventType + "; issuedTime="
                     + result_data.issuedTime + "; list=" + result));
             }
             response.appendChild(p);
@@ -178,29 +186,30 @@
 <div>
     <div>
         <input id="accessToken" placeholder="请输入 accessToken" type="text"/>
-        <input id="userId" placeholder="请输入 userId" type="text"/>
+        <input id="userId" placeholder="请输入 userId（可不填，与accessToken的登陆账号id一致）" type="text"/>
+        <input id="businessId" placeholder="请输入 businessId 用于消息订阅" type="text"/>
     </div>
     </br>
     <div id="sendToDIV">
-        userId 拼接在最后
+        businessId 拼接在最后
         <button id="connectSendTo" onclick="connectSendTo();">connectSendTo</button>
         <button disabled="disabled" id="disconnectSendTo" onclick="disconnectSendTo();">
             disconnectSendTo
         </button>
     </div>
     <br/>
-    <div id="sendToUserDIV">
-        userId 拼接在Header中
-        <button id="connectSendToUser" onclick="connectSendToUser();">connectSendToUser</button>
-        <button disabled="disabled" id="disconnectSendToUser" onclick="disconnectSendToUser();">
-            disconnectSendToUser
-        </button>
-    </div>
+    <!--    <div id="sendToUserDIV">-->
+    <!--        userId 拼接在Header中-->
+    <!--        <button id="connectSendToUser" onclick="connectSendToUser();">connectSendToUser</button>-->
+    <!--        <button disabled="disabled" id="disconnectSendToUser" onclick="disconnectSendToUser();">-->
+    <!--            disconnectSendToUser-->
+    <!--        </button>-->
+    <!--    </div>-->
     <br/>
     <div id="conversationDiv">
-        <input id="msgType" placeholder="请输入 msgType" type="text"/>
+        <input id="eventType" placeholder="请输入 eventType 进行一对一会话" type="text"/>
         <button id="sendMessage" onclick="sendMessageTo();">SendTo</button>
-        <button id="sendMessageToUser" onclick="sendMessageToUser();">SendToUser</button>
+        <!--        <button id="sendMessageToUser" onclick="sendMessageToUser();">SendToUser</button>-->
         <p id="response"></p>
     </div>
 </div>
